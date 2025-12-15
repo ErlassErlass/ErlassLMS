@@ -1,0 +1,75 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - master  # Atau 'main', sesuaikan dengan branch utama Anda
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Ambil kode dari repo
+    - name: Checkout 🛎️
+      uses: actions/checkout@v4
+
+    # 2. Setup Node.js
+    - name: Setup Node.js ⚙️
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    # 3. Install Dependencies & Build
+    - name: Install & Build 🔧
+      run: |
+        npm ci
+        npm run build
+      env:
+        # Environment variables untuk build (jika diperlukan)
+        NEXT_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_BASE_URL }}
+
+    # 4. Siapkan File untuk Deployment (Mode Standalone)
+    # Kita memindahkan file static ke tempat yang benar agar terbaca
+    - name: Prepare Deployment Files 📂
+      run: |
+        mkdir deploy
+        cp -r .next/standalone/* deploy/
+        cp -r .next/static deploy/.next/static
+        cp -r public deploy/public
+        cp server.js deploy/server.js
+        # Optional: Copy package.json for reference
+        cp package.json deploy/package.json
+
+    # 5. Deploy ke cPanel via FTP
+    - name: FTP Deploy 🚀
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy/    # Folder yang mau diupload
+        server-dir: /erlass-app/ # Ganti dengan folder root aplikasi Node.js di cPanel Anda
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/** 
+          # node_modules biasanya sudah ada di standalone, tapi aman untuk direplace jika ada update
+          
+    # 6. Restart Node.js App (Opsional - Tergantung cPanel)
+    # Cara umum restart passenger di cPanel adalah menyentuh file restart.txt
+    # Kita buat file dummy dan upload
+    - name: Trigger Restart 🔄
+      run: |
+        mkdir -p temp_restart/tmp
+        touch temp_restart/tmp/restart.txt
+        
+    - name: Upload Restart Trigger
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./temp_restart/
+        server-dir: /erlass-app/

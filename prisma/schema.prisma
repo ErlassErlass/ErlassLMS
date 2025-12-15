@@ -1,0 +1,532 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String                @id @default(cuid())
+  email               String                @unique
+  name                String
+  role                UserRole              @default(USER)
+  phone               String?
+  parentPhone         String?
+  parentEmail         String?
+  school              String?
+  schoolCode          String?
+  schoolAddress       String?
+  grade               String?
+  avatar              String?
+  emailVerified       DateTime?
+  password            String
+  referredById        String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  subscriptionExpires DateTime?
+  submissions         ChallengeSubmission[]
+  courses             Course[]              @relation("Course Instructor")
+  enrollments         Enrollment[]
+  certificates        Certificate[]
+  transactions        Transaction[]
+  mentorProfile       Mentor?
+  questionBanks       QuestionBank[]        @relation("QuestionBankCreator")
+  quizAttempts        QuizAttempt[]         @relation("UserQuizAttempts")
+  badges              UserBadge[]
+  progress            UserProgress[]
+  referredBy          User?                 @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals           User[]                @relation("UserReferrals")
+
+  // Gamification Fields
+  xp                  Int                   @default(0)
+  level               Int                   @default(1)
+  
+  // Class Relation
+  classId             String?
+  class               Class?                @relation(fields: [classId], references: [id])
+
+  // Shop Relation
+  inventory           UserInventory[]
+  
+  // Daily Engagement
+  currentStreak       Int                   @default(0)
+  lastLoginDate       DateTime?
+  streakFreeze        Int                   @default(0)
+  dailyQuests         DailyQuest[]
+  comments            ChallengeComment[]
+  spinLogs            SpinLog[]
+
+  @@map("users")
+}
+
+model SpinLog {
+  id          String   @id @default(cuid())
+  userId      String
+  rewardType  String   // 'XP', 'VOUCHER', 'ZONK'
+  rewardValue Int      // Amount of XP or discount value
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("spin_logs")
+}
+
+model DailyQuest {
+  id          String    @id @default(cuid())
+  userId      String
+  date        DateTime  // Truncated to midnight
+  type        String    // 'LOGIN', 'READ_MATERIAL', etc.
+  description String
+  target      Int       @default(1)
+  progress    Int       @default(0)
+  isClaimed   Boolean   @default(false)
+  xpReward    Int       @default(50)
+  
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date, type])
+  @@map("daily_quests")
+}
+
+model Mentor {
+  id                String       @id @default(cuid())
+  userId            String       @unique
+  bio               String?
+  hourlyRate        Int?
+  rating            Float?
+  isVerified        Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  mentorEnrollments Enrollment[] @relation("MentorEnrollments")
+  user              User         @relation(fields: [userId], references: [id])
+  classes           Class[]
+
+  @@map("mentors")
+}
+
+model Class {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  school    String?
+  mentorId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mentor    Mentor?  @relation(fields: [mentorId], references: [id])
+  students  User[]
+
+  @@map("classes")
+}
+
+model Course {
+  id            String          @id @default(cuid())
+  title         String
+  description   String?
+  category      String
+  level         String
+  price         Float           @default(0)
+  isPremium     Boolean         @default(false)
+  freeSections  Int             @default(5)
+  totalSections Int             @default(0)
+  coverImage    String?
+  isPublished   Boolean         @default(false)
+  createdById   String
+  categoryId    String?         // Link to dynamic category
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  sections      CourseSection[]
+  createdBy     User            @relation("Course Instructor", fields: [createdById], references: [id])
+  categoryRel   CourseCategory? @relation(fields: [categoryId], references: [id])
+  enrollments   Enrollment[]
+  transactions  Transaction[]
+  certificates  Certificate[]
+  quizzes       Quiz[]          @relation("CourseQuizzes")
+  progress      UserProgress[]  @relation("CourseProgress")
+  relatedChallenges Challenge[] @relation("ChallengeRelatedCourse")
+
+  @@map("courses")
+}
+
+model CourseCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  courses     Course[]
+  parent      CourseCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    CourseCategory[] @relation("CategoryHierarchy")
+
+  @@map("course_categories")
+}
+
+model CourseSection {
+  id                String         @id @default(cuid())
+  title             String
+  description       String?
+  content           String?
+  videoUrl          String?
+  orderIndex        Int
+  isFree            Boolean        @default(false)
+  estimatedDuration Int?
+  courseId          String
+  createdAt         DateTime       @default(now())
+  course            Course         @relation(fields: [courseId], references: [id])
+  quizzes           Quiz[]         @relation("SectionQuizzes")
+  progress          UserProgress[] @relation("SectionProgress")
+
+  @@map("course_sections")
+}
+
+model Enrollment {
+  id                 String           @id @default(cuid())
+  userId             String
+  courseId           String
+  mentorId           String?
+  transactionId      String?          @unique // Link to payment
+  status             EnrollmentStatus @default(ENROLLED)
+  progressPercentage Float            @default(0)
+  // ... existing fields
+  currentSectionId   String?
+  completedAt        DateTime?
+  enrolledAt         DateTime         @default(now())
+  course             Course           @relation(fields: [courseId], references: [id])
+  mentor             Mentor?          @relation("MentorEnrollments", fields: [mentorId], references: [id])
+  user               User             @relation(fields: [userId], references: [id])
+  transaction        Transaction?     @relation(fields: [transactionId], references: [id]) // Optional, maybe free course
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Voucher {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  description String?
+  discountType DiscountType @default(PERCENTAGE) // PERCENTAGE or FIXED
+  discountValue Int         // e.g. 10 for 10%, or 50000 for 50k
+  minPurchase   Int         @default(0)
+  maxDiscount   Int?        // Max deduction amount
+  maxUsage      Int         @default(100)
+  usedCount     Int         @default(0)
+  expiresAt     DateTime?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  transactions  Transaction[]
+
+  @@map("vouchers")
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  userId        String
+  courseId      String
+  voucherId     String?
+  amount        Int               // Original price
+  discountAmount Int              @default(0)
+  totalAmount   Int               // Final price paid
+  status        TransactionStatus @default(PENDING)
+  snapToken     String?           // Midtrans token
+  paymentType   String?           // e.g. 'credit_card', 'gopay'
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  
+  user          User              @relation(fields: [userId], references: [id])
+  course        Course            @relation(fields: [courseId], references: [id])
+  voucher       Voucher?          @relation(fields: [voucherId], references: [id])
+  enrollment    Enrollment?
+
+  @@map("transactions")
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+}
+
+
+model UserProgress {
+  id          String        @id @default(cuid())
+  userId      String
+  sectionId   String
+  courseId    String
+  completed   Boolean       @default(false)
+  quizScore   Float?
+  timeSpent   Int?
+  completedAt DateTime?
+  course      Course        @relation("CourseProgress", fields: [courseId], references: [id])
+  section     CourseSection @relation("SectionProgress", fields: [sectionId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+
+  @@unique([userId, sectionId])
+  @@map("user_progress")
+}
+
+model Quiz {
+  id          String         @id @default(cuid())
+  sectionId   String
+  title       String
+  description String?
+  duration    Int?
+  maxAttempts Int            @default(1)
+  isActive    Boolean        @default(true)
+  courseId    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  attempts    QuizAttempt[]  @relation("QuizAttempts")
+  questions   QuizQuestion[]
+  course      Course?        @relation("CourseQuizzes", fields: [courseId], references: [id])
+  section     CourseSection  @relation("SectionQuizzes", fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id            String       @id @default(cuid())
+  quizId        String
+  questionId    String
+  order         Int
+  points        Int?         @default(10)
+  correctAnswer String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  options       QuizOption[]
+  question      Question     @relation(fields: [questionId], references: [id])
+  quiz          Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id         String       @id @default(cuid())
+  questionId String
+  optionText String
+  isCorrect  Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_options")
+}
+
+model Challenge {
+  id             String                @id @default(cuid())
+  title          String
+  description    String
+  difficulty     String
+  category       String
+  points         Int
+  maxAttempts    Int                   @default(3)
+  timeLimit      Int?
+  instructions   String
+  starterCode    String?
+  expectedOutput String
+  published      Boolean               @default(false)
+  publishedAt    DateTime?
+  relatedCourseId String?              // Soft Selling Link
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  
+  relatedCourse  Course?               @relation("ChallengeRelatedCourse", fields: [relatedCourseId], references: [id])
+  submissions    ChallengeSubmission[]
+  certificates   Certificate[]
+  comments       ChallengeComment[]
+
+  @@map("challenges")
+}
+
+model ChallengeSubmission {
+  id            String    @id @default(cuid())
+  userId        String
+  challengeId   String
+  code          String
+  result        String?
+  passed        Boolean
+  attemptNumber Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  challenge     Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("challenge_submissions")
+}
+
+model ChallengeComment {
+  id          String    @id @default(cuid())
+  challengeId String
+  userId      String
+  content     String
+  isHint      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("challenge_comments")
+}
+
+model Badge {
+  id            String      @id @default(cuid())
+  slug          String      @unique
+  name          String
+  description   String
+  imageUrl      String
+  category      String      // e.g., "Course", "Challenge", "Achievement"
+  xpReward      Int         @default(0)
+  
+  criteriaType  String      @default("MANUAL") // 'COURSE_COMPLETION', 'SECTION_COMPLETION', 'CHALLENGE_COUNT', 'XP_MILESTONE', 'MANUAL'
+  criteriaValue String?     // ID or numeric string
+  
+  users         UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model QuestionBank {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  category    String
+  difficulty  String
+  isActive    Boolean    @default(true)
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdBy   User       @relation("QuestionBankCreator", fields: [createdById], references: [id])
+  questions   Question[]
+
+  @@map("question_banks")
+}
+
+model Question {
+  id             String         @id @default(cuid())
+  questionText   String
+  questionType   String
+  options        Json?
+  correctAnswer  String
+  explanation    String?
+  mediaUrl       String?        // URL to image, video, or audio
+  mediaType      String?        // IMAGE, VIDEO, AUDIO
+  points         Int            @default(10)
+  questionBankId String
+  createdAt      DateTime       @default(now())
+  questionBank   QuestionBank   @relation(fields: [questionBankId], references: [id])
+  quizQuestions  QuizQuestion[]
+
+  @@map("questions")
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  userId      String
+  quizId      String
+  score       Float?
+  timeSpent   Int?
+  completedAt DateTime?
+  answers     Json?
+  createdAt   DateTime  @default(now())
+  quiz        Quiz      @relation("QuizAttempts", fields: [quizId], references: [id])
+  user        User      @relation("UserQuizAttempts", fields: [userId], references: [id])
+
+  @@map("quiz_attempts")
+}
+
+enum UserRole {
+  SUPERADMIN
+  MENTOR
+  USER
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  COMPLETED
+  DROPPED
+}
+
+enum QuizQuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  FILL_IN_BLANK
+  ESSAY
+}
+
+model Certificate {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   // 'COURSE', 'CHALLENGE', 'ACHIEVEMENT'
+  courseId     String?
+  challengeId  String?
+  serialNumber String   @unique
+  issuedAt     DateTime @default(now())
+  metadata     Json?
+
+  user      User       @relation(fields: [userId], references: [id])
+  course    Course?    @relation(fields: [courseId], references: [id])
+  challenge Challenge? @relation(fields: [challengeId], references: [id])
+
+  @@map("certificates")
+}
+
+// ------------------------------------
+// VIRTUAL ECONOMY (XP SHOP)
+// ------------------------------------
+
+enum ShopItemType {
+  FRAME
+  THEME
+  TITLE
+}
+
+model ShopItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  cost        Int
+  type        ShopItemType
+  assetUrl    String
+  isPremium   Boolean  @default(false)
+  
+  inventory   UserInventory[]
+
+  @@map("shop_items")
+}
+
+model UserInventory {
+  id          String   @id @default(cuid())
+  userId      String
+  shopItemId  String
+  purchasedAt DateTime @default(now())
+  isActive    Boolean  @default(false)
+
+  user        User     @relation(fields: [userId], references: [id])
+  shopItem    ShopItem @relation(fields: [shopItemId], references: [id])
+
+  @@unique([userId, shopItemId]) // User can only own one instance of an item
+  @@map("user_inventory")
+}

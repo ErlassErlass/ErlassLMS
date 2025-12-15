@@ -1,26 +1,57 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 30 10% 94%; /* #F2F0EF (Offwhite) converted to HSL approx */
+    --foreground: 222 94% 32%; /* #05339C */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 94% 32%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 94% 32%;
+
+    /* Erlass Brand Colors */
+    /* Primary: #41A67E (Mint Green) */
+    --primary: 156 44% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: #05339C (Deep Blue) */
+    --secondary: 222 94% 32%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Tertiary: #1055C9 (Bright Blue) */
+    --tertiary: 218 85% 43%;
+    --tertiary-foreground: 0 0% 100%;
+
+    /* Accent: #E5C95F (Gold) */
+    --accent: 47 72% 64%;
+    --accent-foreground: 222 94% 32%;
+
+    --muted: 210 40% 96.1%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 156 43% 45%;
+
+    --radius: 0.75rem;
   }
 }
 
+* {
+  border-color: hsl(var(--border));
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #05339C;
 }
