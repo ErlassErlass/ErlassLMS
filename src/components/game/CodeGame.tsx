@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Play, RefreshCcw, HelpCircle } from "lucide-react"
 import { toast } from "sonner"
 
-// Tipe Data Level
-type LevelConfig = {
+export type LevelConfig = {
   gridSize: number
   start: { x: number, y: number }
   finish: { x: number, y: number }
@@ -14,31 +13,31 @@ type LevelConfig = {
   maxCommands?: number
 }
 
-// Level 1: Labirin Lurus
-const LEVEL_1: LevelConfig = {
+// Default Level (Fallback)
+const LEVEL_DEFAULT: LevelConfig = {
   gridSize: 5,
   start: { x: 0, y: 0 },
-  finish: { x: 4, y: 0 }, // Ujung kanan
-  obstacles: [
-    { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, // Tembok bawah jalur
-    { x: 1, y: -1 } // Batas atas (logic check)
-  ]
+  finish: { x: 4, y: 0 },
+  obstacles: [{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }]
 }
 
-export default function CodeGame() {
+interface CodeGameProps {
+    levelConfig?: LevelConfig
+    onComplete?: (code: string) => void
+}
+
+export default function CodeGame({ levelConfig = LEVEL_DEFAULT, onComplete }: CodeGameProps) {
   const [code, setCode] = useState("// Tulis kodemu di sini\n// Perintah: move(), turnRight(), turnLeft()\n\nmove()\nmove()")
-  const [playerPos, setPlayerPos] = useState(LEVEL_1.start)
-  const [playerDir, setPlayerDir] = useState(90) // 0: Up, 90: Right, 180: Down, 270: Left
+  const [playerPos, setPlayerPos] = useState(levelConfig.start)
+  const [playerDir, setPlayerDir] = useState(90) 
   const [isRunning, setIsRunning] = useState(false)
-  const [level, setLevel] = useState(LEVEL_1)
-  const [history, setHistory] = useState<any[]>([]) // Untuk undo/animasi
+  const [level, setLevel] = useState(levelConfig)
 
   // Reset Game
   const handleReset = () => {
     setPlayerPos(level.start)
     setPlayerDir(90)
     setIsRunning(false)
-    setHistory([])
   }
 
   // Interpreter Logic
@@ -92,6 +91,9 @@ export default function CodeGame() {
     // Cek Win Condition
     if (currentX === level.finish.x && currentY === level.finish.y) {
         toast.success("Level Selesai! 🎉")
+        if (onComplete) {
+            onComplete(code)
+        }
     } else {
         toast.error("Belum sampai tujuan. Coba lagi!")
     }

@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ERLASS PLATFORM (Enterprise LMS)
 
-## Getting Started
+Platform Learning Management System (LMS) modern berbasis Next.js 16, dirancang untuk pendidikan coding dengan fitur gamifikasi tingkat lanjut.
 
-First, run the development server:
+## 🚀 Fitur Utama (v2.0)
+
+*   **Gamifikasi:** XP, Level, Badge, Daily Streak, Daily Quests, dan XP Shop.
+*   **Code Adventure:** Game engine visual untuk belajar logika pemrograman.
+*   **Multi-School:** Manajemen kelas dan mentor untuk banyak sekolah sekaligus.
+*   **Learning Tools:** Kuis interaktif, tantangan coding (Python/Web), dan diskusi.
+*   **Commerce:** Integrasi pembayaran iPaymu dan sistem voucher.
+
+## 📂 Dokumentasi Lengkap
+
+Semua panduan teknis tersedia di folder `docs/`:
+
+*   [**RELEASE NOTES v2.0**](docs/RELEASE_NOTES_v2.0.md) - **BACA INI DULU!** (Fitur terbaru).
+*   [Developer Guide](docs/DEVELOPER_GUIDE.md) - Struktur folder dan database.
+*   [Game Engine Docs](docs/GAME_ENGINE_DOCS.md) - Cara kerja game coding.
+*   [Deployment cPanel](docs/DEPLOYMENT_CPANEL_FINAL.md) - Cara upload ke hosting.
+
+## 🛠️ Tech Stack
+
+*   **Framework:** Next.js 16 (App Router)
+*   **Database:** PostgreSQL + Prisma ORM
+*   **UI:** Tailwind CSS + Shadcn/UI
+*   **Auth:** NextAuth.js
+*   **Payment:** iPaymu
+
+## ⚡ Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Setup Database
+npx prisma generate
+npx prisma db push
+
+# Run Dev Server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

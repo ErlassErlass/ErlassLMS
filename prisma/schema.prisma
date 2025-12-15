@@ -329,12 +329,14 @@ model Challenge {
   description    String
   difficulty     String
   category       String
+  type           String                @default("STANDARD") // 'STANDARD', 'GAME'
   points         Int
   maxAttempts    Int                   @default(3)
   timeLimit      Int?
   instructions   String
   starterCode    String?
-  expectedOutput String
+  expectedOutput String?               // Optional for Games
+  gameConfig     Json?                 // Stores Grid, Obstacles, Start/End for Games
   published      Boolean               @default(false)
   publishedAt    DateTime?
   relatedCourseId String?              // Soft Selling Link

@@ -6,6 +6,7 @@ import { ChevronLeft, Play, Save, Loader2, CheckCircle, XCircle } from "lucide-r
 import Link from "next/link"
 import { submitChallenge } from "@/app/actions/challenge-actions"
 import { useRouter } from "next/navigation"
+import CodeGame, { LevelConfig } from "@/components/game/CodeGame"
 
 
 interface ChallengeEditorProps {
@@ -13,9 +14,11 @@ interface ChallengeEditorProps {
     id: string
     title: string
     instructions: string
-    expectedOutput: string
+    expectedOutput: string | null // Make optional
     starterCode: string | null
-    category: string // Added category
+    category: string 
+    type: string // Added type
+    gameConfig: any // Added gameConfig
   }
 }
 
@@ -26,11 +29,54 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
   const [resultStatus, setResultStatus] = useState<"idle" | "success" | "error">("idle")
   const router = useRouter()
 
-  // Determine mode based on category (normalized)
+  // Determine mode
   const mode = challenge.category.toLowerCase()
   const isScratch = mode.includes('scratch') || mode.includes('block')
   const isWeb = mode.includes('web') || mode.includes('html') || mode.includes('css') || mode.includes('javascript')
   const isPython = mode.includes('python')
+  const isGame = challenge.type === 'GAME'
+
+  // Handle Game Completion
+  const handleGameComplete = async (submittedCode: string) => {
+      try {
+          const result = await submitChallenge(challenge.id, submittedCode, true)
+          if (result.success) {
+              setResultStatus("success")
+              router.refresh()
+          }
+      } catch (e) {
+          console.error(e)
+      }
+  }
+
+  // Render Game View
+  if (isGame) {
+      return (
+        <div className="min-h-screen bg-[#1e1e1e] text-white flex flex-col">
+            <div className="h-16 border-b border-[#333] flex items-center justify-between px-4 bg-[#252526]">
+                <div className="flex items-center gap-4">
+                    <Link href={`/dashboard/challenges/${challenge.id}`}>
+                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                        <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                    </Link>
+                    <h1 className="font-bold text-sm md:text-base">{challenge.title}</h1>
+                </div>
+                {resultStatus === 'success' && (
+                    <div className="flex items-center gap-2 text-green-500 font-bold bg-green-900/20 px-4 py-2 rounded-full border border-green-800">
+                        <CheckCircle className="h-5 w-5" /> Level Selesai!
+                    </div>
+                )}
+            </div>
+            <div className="flex-1 p-6 overflow-hidden">
+                <CodeGame 
+                    levelConfig={challenge.gameConfig as LevelConfig} 
+                    onComplete={handleGameComplete}
+                />
+            </div>
+        </div>
+      )
+  }
 
   // Setup default starter code based on mode if empty
   useState(() => {
