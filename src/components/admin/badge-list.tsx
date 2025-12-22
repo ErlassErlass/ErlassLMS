@@ -52,7 +52,14 @@ export function BadgeList({ badges, courses }: BadgeListProps) {
         {badges.map((badge) => (
           <Card key={badge.id} className="relative overflow-hidden">
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-              <div className="text-4xl">{badge.imageUrl}</div>
+              <div className="flex items-center gap-4">
+                {badge.imageUrl.startsWith('data:image') || badge.imageUrl.startsWith('/') || badge.imageUrl.startsWith('http') ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={badge.imageUrl} alt={badge.name} className="w-12 h-12 object-cover rounded-full border border-gray-200" />
+                ) : (
+                    <div className="text-4xl">{badge.imageUrl}</div>
+                )}
+              </div>
               <div className="flex gap-2">
                 <Button variant="ghost" size="icon" onClick={() => handleEdit(badge)}>
                   <Edit className="h-4 w-4" />

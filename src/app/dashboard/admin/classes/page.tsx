@@ -124,6 +124,11 @@ export default async function AdminClassesPage() {
                   </td>
                   <td className="p-6 text-right">
                     <div className="flex items-center justify-end gap-2">
+                        <Link href={`/dashboard/admin/classes/${c.id}`}>
+                             <Button variant="default" size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
+                                <Users className="h-4 w-4" /> Detail
+                            </Button>
+                        </Link>
                         <Link href={`/dashboard/admin/classes/${c.id}/gradebook`}>
                             <Button variant="outline" size="sm" className="gap-2">
                                 <BookOpenCheck className="h-4 w-4" /> Nilai

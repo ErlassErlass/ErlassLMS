@@ -158,7 +158,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
               <div className="flex flex-wrap gap-4">
                 {isEnrolled ? (
-                  <Link href={`/dashboard/courses/${course.id}/sections/${nextSectionId}`}>
+                  <Link href={`/dashboard/courses/${course.id}/learn/${nextSectionId}`}>
                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl h-14 px-8 shadow-lg hover:shadow-xl transition-all">
                       <PlayCircle className="mr-2 h-5 w-5" />
                       Lanjutkan Belajar
@@ -206,7 +206,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                 return (
                   <Link 
                     key={section.id} 
-                    href={!isLocked ? `/dashboard/courses/${course.id}/sections/${section.id}` : '#'}
+                    href={!isLocked ? `/dashboard/courses/${course.id}/learn/${section.id}` : '#'}
                     className={`block group transition-all ${isLocked ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
                   >
                     <div className={`

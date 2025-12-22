@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { getCourse, getCourseSection } from "@/lib/course-service";
 import { ProgressService } from "@/lib/services/progress-service";
+import { getLessonComments } from "@/app/actions/discussion-actions";
+import { LessonDiscussion } from "@/components/course/lesson-discussion";
 import { QuizService } from "@/lib/services/quiz-service";
 import { Play, CheckCircle, SquareArrowLeft, SquareArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -40,6 +42,10 @@ export default async function CourseLearningPage({
   
   // Check if there's a quiz for this section
   const quiz = await QuizService.getQuizBySection(sectionId);
+
+  // Get Comments
+  const commentsResult = await getLessonComments(sectionId);
+  const comments = commentsResult.success ? commentsResult.data : [];
 
   if (!course || !section) {
     return (
@@ -137,6 +143,18 @@ export default async function CourseLearningPage({
                 })()}
               </div>
             )}
+
+            {/* Discussion Section */}
+            <div className="mt-12 pt-8 border-t border-gray-200">
+                <LessonDiscussion 
+                    sectionId={sectionId}
+                    courseId={courseId}
+                    initialComments={comments as any} // Type assertion for now
+                    currentUserId={userId}
+                    userRole={session.user.role}
+                    commentsEnabled={section.enableComments ?? true}
+                />
+            </div>
 
             {/* Action Buttons */}
             <div className="mt-8 flex flex-wrap gap-4">

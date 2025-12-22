@@ -8,10 +8,13 @@ import { GamificationService } from "@/lib/services/gamification-service"
 import { User, Award, Zap, Calendar, BookOpen, Code, FileText, Download } from "lucide-react"
 import { getUserCertificates } from "@/app/actions/certificate-actions"
 
+import { EditProfileDialog } from "@/components/profile/edit-profile-dialog"
+
 async function getUserProfile(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
+      mentorProfile: true, // Included for edit dialog
       badges: {
         include: {
           badge: true
@@ -29,8 +32,8 @@ async function getUserProfile(userId: string) {
   })
 
   // Fetch Active Inventory Items (Frame & Title)
-  // Using Raw Query because of potential client mismatch
-  const activeItems: any[] = await prisma.$queryRaw`
+  // Fix Type Safety
+  const activeItems = await prisma.$queryRaw<{ type: string, assetUrl: string }[]>`
     SELECT s."type", s."assetUrl" 
     FROM user_inventory ui
     JOIN shop_items s ON ui."shopItemId" = s.id
@@ -84,13 +87,24 @@ export default async function ProfilePage() {
                 )}
             </h1>
             <p className="text-gray-400 text-lg mb-4">{user.email}</p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-3">
+            <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-4">
               <Badge className="bg-[#FF5656] hover:bg-[#CC0000] text-white border-none text-sm py-1 px-3">
                 Level {user.level}
               </Badge>
               <Badge variant="outline" className="border-gray-600 text-gray-300 text-sm py-1 px-3">
                 {user.role}
               </Badge>
+            </div>
+            
+            {/* Edit Profile Button */}
+            <div className="flex justify-center md:justify-start">
+                <EditProfileDialog user={{
+                    name: user.name || '',
+                    email: user.email || '',
+                    phone: user.phone,
+                    role: user.role,
+                    mentorProfile: user.mentorProfile
+                }} />
             </div>
           </div>
 

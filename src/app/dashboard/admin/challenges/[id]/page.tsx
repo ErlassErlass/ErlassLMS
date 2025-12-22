@@ -99,7 +99,7 @@ export default async function EditChallengePage({ params }: { params: Promise<{ 
                 <Textarea 
                     id="expectedOutput" 
                     name="expectedOutput" 
-                    defaultValue={challenge.expectedOutput}
+                    defaultValue={challenge.expectedOutput || ''}
                     className="rounded-xl h-24 font-mono text-sm bg-[#252526] border-gray-600 text-gray-300" 
                 />
             </div>

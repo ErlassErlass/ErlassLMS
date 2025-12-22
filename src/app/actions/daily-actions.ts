@@ -4,7 +4,6 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-import { generateId } from "@/lib/id-generator"
 
 // Helper to get midnight date
 const getToday = () => {
@@ -21,12 +20,15 @@ const getYesterday = () => {
 }
 
 export async function checkDailyLogin(userId: string) {
+    const session = await getServerSession(authOptions)
+    if (!session || session.user.id !== userId) return { error: "Unauthorized" }
+
     try {
         const today = getToday()
+        const yesterday = getYesterday()
         
-        // 1. Get User Data (Raw query due to client sync issues)
-        const users: any[] = await prisma.$queryRaw`SELECT * FROM users WHERE id = ${userId}`
-        const user = users[0]
+        // 1. Get User Data
+        const user = await prisma.user.findUnique({ where: { id: userId } })
         if (!user) return
 
         const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null
@@ -40,13 +42,13 @@ export async function checkDailyLogin(userId: string) {
             // First time ever
             newStreak = 1
             shouldUpdate = true
-        } else if (lastLogin.getTime() === getYesterday().getTime()) {
+        } else if (lastLogin.getTime() === yesterday.getTime()) {
             // Login consecutive day
             newStreak += 1
             shouldUpdate = true
-        } else if (lastLogin.getTime() < getYesterday().getTime()) {
+        } else if (lastLogin.getTime() < yesterday.getTime()) {
             // Missed a day
-            // Check Freeze? (Simplified: Just reset for now unless requested)
+            // If last login was NOT today (already handled above), reset.
             if (lastLogin.getTime() !== today.getTime()) {
                 newStreak = 1
                 shouldUpdate = true
@@ -54,18 +56,32 @@ export async function checkDailyLogin(userId: string) {
         }
 
         if (shouldUpdate || !lastLogin || lastLogin.getTime() !== today.getTime()) {
-            await prisma.$executeRaw`
-                UPDATE users 
-                SET "currentStreak" = ${newStreak}, "lastLoginDate" = NOW() 
-                WHERE id = ${userId}
-            `
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    currentStreak: newStreak,
+                    lastLoginDate: new Date()
+                }
+            })
         }
 
         // 3. Generate Daily Quests
-        const quests: any[] = await prisma.$queryRaw`
-            SELECT * FROM daily_quests 
-            WHERE "userId" = ${userId} AND date = ${today}
-        `
+        // Use date range to ensure we catch any quests for today regardless of time (though we store as 00:00)
+        const startOfDay = new Date(today)
+        startOfDay.setHours(0, 0, 0, 0)
+        
+        const endOfDay = new Date(today)
+        endOfDay.setHours(23, 59, 59, 999)
+
+        const quests = await prisma.dailyQuest.findMany({
+            where: {
+                userId: userId,
+                date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                }
+            }
+        })
         
         if (quests.length === 0) {
             // Create default quests
@@ -75,16 +91,23 @@ export async function checkDailyLogin(userId: string) {
                 { type: 'COMPLETE_QUIZ', desc: 'Selesaikan 1 kuis dengan nilai sempurna', target: 1, xp: 100 }
             ]
 
+            // Use createMany for efficiency if supported, or loop
             for (const q of newQuests) {
-                const qId = generateId('badge') // re-using id gen
-                await prisma.$executeRaw`
-                    INSERT INTO daily_quests (id, "userId", date, type, description, target, progress, "isClaimed", "xpReward")
-                    VALUES (${qId}, ${userId}, ${today}, ${q.type}, ${q.desc}, ${q.target}, ${q.type === 'LOGIN' ? 1 : 0}, false, ${q.xp})
-                `
+                await prisma.dailyQuest.create({
+                    data: {
+                        userId: userId,
+                        date: today,
+                        type: q.type,
+                        description: q.desc,
+                        target: q.target,
+                        progress: q.type === 'LOGIN' ? 1 : 0, // Auto complete login quest
+                        isClaimed: false,
+                        xpReward: q.xp
+                    }
+                })
             }
         }
         
-        // revalidatePath('/dashboard') // Removed to prevent "revalidatePath during render" error
         return { success: true, streak: newStreak }
     } catch (e) {
         console.error("Daily Login Check Error:", e)
@@ -93,11 +116,24 @@ export async function checkDailyLogin(userId: string) {
 
 export async function getDailyQuests(userId: string) {
     const today = getToday()
-    const quests: any[] = await prisma.$queryRaw`
-        SELECT * FROM daily_quests 
-        WHERE "userId" = ${userId} AND date = ${today}
-        ORDER BY "xpReward" ASC
-    `
+    const startOfDay = new Date(today)
+    startOfDay.setHours(0, 0, 0, 0)
+    
+    const endOfDay = new Date(today)
+    endOfDay.setHours(23, 59, 59, 999)
+
+    const quests = await prisma.dailyQuest.findMany({
+        where: {
+            userId: userId,
+            date: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        },
+        orderBy: {
+            xpReward: 'asc'
+        }
+    })
     return quests
 }
 
@@ -106,18 +142,23 @@ export async function claimQuest(questId: string) {
     if (!session) return { error: "Unauthorized" }
     
     try {
-        const quests: any[] = await prisma.$queryRaw`SELECT * FROM daily_quests WHERE id = ${questId}`
-        const quest = quests[0]
+        const quest = await prisma.dailyQuest.findUnique({ where: { id: questId } })
         
         if (!quest) return { error: "Quest not found" }
         if (quest.isClaimed) return { error: "Already claimed" }
         if (quest.progress < quest.target) return { error: "Quest not completed" }
 
         // Give Reward
-        await prisma.$executeRaw`UPDATE users SET xp = xp + ${quest.xpReward} WHERE id = ${session.user.id}`
+        await prisma.user.update({
+            where: { id: session.user.id },
+            data: { xp: { increment: quest.xpReward } }
+        })
         
         // Mark Claimed
-        await prisma.$executeRaw`UPDATE daily_quests SET "isClaimed" = true WHERE id = ${questId}`
+        await prisma.dailyQuest.update({
+            where: { id: questId },
+            data: { isClaimed: true }
+        })
 
         revalidatePath('/dashboard')
         return { success: true, message: `Berhasil klaim ${quest.xpReward} XP!` }

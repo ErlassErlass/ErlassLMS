@@ -94,7 +94,17 @@ export class ProgressService {
             include: {
               sections: {
                 orderBy: { orderIndex: 'asc' },
-                include: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  orderIndex: true,
+                  isFree: true,
+                  estimatedDuration: true,
+                  courseId: true,
+                  // SECURITY: Exclude content and videoUrl to prevent IDOR/Unauthorized access to locked content
+                  // content: false, 
+                  // videoUrl: false,
                   progress: {
                     where: { userId }
                   }
@@ -113,10 +123,11 @@ export class ProgressService {
       }),
       prisma.course.findUnique({
         where: { id: courseId },
-        include: {
-          sections: {
-            orderBy: { orderIndex: 'asc' }
-          }
+        select: {
+            sections: {
+                orderBy: { orderIndex: 'asc' },
+                select: { id: true, orderIndex: true }
+            }
         }
       })
     ])
@@ -128,17 +139,27 @@ export class ProgressService {
     const totalSections = course.sections.length
     const progressPercentage = (completedSections / totalSections) * 100
 
+    // Safe fallback logic
+    const currentSectionId = enrollment.currentSectionId
+    let currentSection = course.sections.find(s => s.id === currentSectionId)
+    
+    // If not found (or null), fallback to first section
+    if (!currentSection) {
+        currentSection = course.sections[0]
+    }
+
     return {
       enrollment,
       progress: {
         percentage: progressPercentage,
         completedSections,
         totalSections,
-        currentSection: enrollment.currentSectionId
-          ? course.sections.find(s => s.id === enrollment.currentSectionId)
-          : course.sections[0]
+        // We only return the ID/Order of the current section here, the frontend fetches details separately
+        // or uses the list from 'sections' which is now sanitized.
+        currentSection
       },
-      sections: enrollment.course.sections.map(section => ({
+      // Sections list is now sanitized (no content/videoUrl)
+      sections: enrollment.course.sections.map((section: any) => ({
         ...section,
         userProgress: section.progress[0] || null
       }))

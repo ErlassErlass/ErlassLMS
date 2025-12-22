@@ -1,18 +1,22 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, SessionProviderProps } from "next-auth/react";
 import { ReactNode } from "react";
 
 type Props = {
   children: ReactNode;
-};
+} & Pick<SessionProviderProps, 'refetchInterval' | 'refetchOnWindowFocus'>;
 
-export function AuthProvider({ children }: Props) {
+export function AuthProvider({ 
+  children,
+  refetchInterval = 5 * 60, // Default to 5 minutes
+  refetchOnWindowFocus = true
+}: Props) {
   return (
     <SessionProvider 
       // Adding a smooth loading experience for session initialization
-      refetchInterval={5 * 60} // Refetch session every 5 minutes
-      refetchOnWindowFocus={true} // Refetch on window focus
+      refetchInterval={refetchInterval} 
+      refetchOnWindowFocus={refetchOnWindowFocus} 
     >
       {children}
     </SessionProvider>

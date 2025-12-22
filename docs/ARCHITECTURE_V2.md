@@ -39,6 +39,42 @@ Add a `specialties` field to the `Mentor` model to store an array of tags.
 model Mentor {
   // ... existing fields
   specialties Json?  // Example: ["Math", "Physics", "Grade 10"]
+  // New Relation:
+  teachingCourses   CourseMentor[]
+}
+
+model CourseMentor {
+  id        String   @id @default(cuid())
+  courseId  String
+  mentorId  String
+  assignedAt DateTime @default(now())
+
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  mentor    Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, mentorId])
+  @@map("course_mentors")
+}
+```
+
+### 4.1 Lesson Discussion System
+To facilitate social learning, a threaded comment system is attached to each `CourseSection`.
+
+**Schema Addition:**
+```prisma
+model LessonComment {
+  id          String    @id @default(cuid())
+  sectionId   String
+  userId      String
+  content     String
+  parentId    String?   // For nested replies
+  createdAt   DateTime  @default(now())
+  
+  section     CourseSection @relation(...)
+  user        User          @relation(...)
+  replies     LessonComment[] @relation("CommentReplies")
+  
+  @@map("lesson_comments")
 }
 ```
 

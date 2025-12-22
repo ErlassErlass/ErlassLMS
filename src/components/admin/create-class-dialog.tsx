@@ -47,7 +47,13 @@ export function CreateClassDialog({ mentors }: CreateClassDialogProps) {
     setLoading(true)
     
     try {
-      const res = await createClass(name, code, mentorId === "unassigned" ? undefined : mentorId, school)
+      const formData = new FormData()
+      formData.append('name', name)
+      formData.append('code', code)
+      if (mentorId !== 'unassigned') formData.append('mentorId', mentorId)
+      if (school) formData.append('school', school)
+
+      const res = await createClass(formData)
       if (res.success) {
         toast.success("Class created successfully")
         setOpen(false)

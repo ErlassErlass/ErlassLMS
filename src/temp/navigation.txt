@@ -1,0 +1,10 @@
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Kursus Saya', href: '/dashboard/courses', icon: BookOpen },
+  { name: 'Tantangan', href: '/dashboard/challenges', icon: Trophy },
+  { name: 'Showcases', href: '/dashboard/showcases', icon: Star },
+  { name: 'Leaderboard', href: '/dashboard/leaderboard', icon: Users },
+  { name: 'XP Shop', href: '/dashboard/shop', icon: ShoppingBag },
+  { name: 'Profil Saya', href: '/dashboard/profile', icon: User },
+  { name: 'Pengaturan', href: '/dashboard/settings', icon: Settings },
+];

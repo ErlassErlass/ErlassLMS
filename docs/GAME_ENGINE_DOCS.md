@@ -102,4 +102,24 @@ Saat ini game hanya menerima urutan perintah linear.
 
 ---
 
+## 6. External Editors Integration (New v2.1)
+
+Selain engine internal (Robot Maze), Erlass Platform kini mendukung editor eksternal via Iframe untuk kategori khusus.
+
+### A. Scratch Integration
+*   **URL:** `https://machinelearningforkids.co.uk/scratch/`
+*   **Trigger:** Kategori tantangan mengandung `scratch` atau `block`.
+*   **Validation:** Client-side simulation (Timer 1 detik).
+
+### B. Micro:bit Integration
+*   **URL:** `https://makecode.microbit.org/#editor`
+*   **Trigger:** Kategori tantangan mengandung `microbit` atau `robotics`.
+*   **Validation:** Client-side simulation (Timer 1 detik).
+
+### C. Internal Robot Maze
+*   **Trigger:** Kategori mengandung `gamebased` ATAU (Tipe `GAME` DAN BUKAN Scratch/Microbit).
+*   **Logic:** Menggunakan `src/components/game/CodeGame.tsx`.
+
+---
+
 *Happy Coding & Gaming!* 🎮

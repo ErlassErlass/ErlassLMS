@@ -100,12 +100,12 @@ export function BadgeDialog({ badge, courses, open, onOpenChange }: BadgeDialogP
                 </div>
                 
                 {iconType === 'emoji' ? (
-                    <Input id="imageUrlText" name="imageUrlText" placeholder="Contoh: 🏆" defaultValue={badge?.imageUrl?.startsWith('/uploads') ? '' : badge?.imageUrl} className="rounded-lg" />
+                    <Input id="imageUrlText" name="imageUrlText" placeholder="Contoh: 🏆" defaultValue={badge?.imageUrl?.startsWith('data:image') || badge?.imageUrl?.startsWith('/') || badge?.imageUrl?.startsWith('http') ? '' : badge?.imageUrl} className="rounded-lg" />
                 ) : (
                     <div className="space-y-2">
                         <Input type="file" id="imageFile" name="imageFile" accept="image/*" className="rounded-lg bg-gray-50 dark:bg-gray-800" />
                         <input type="hidden" name="currentImageUrl" value={badge?.imageUrl || ''} />
-                        {badge?.imageUrl && badge?.imageUrl.startsWith('/uploads') && (
+                        {(badge?.imageUrl && (badge?.imageUrl.startsWith('data:image') || badge?.imageUrl.startsWith('/') || badge?.imageUrl.startsWith('http'))) && (
                             <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-200">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={badge.imageUrl} alt="Preview" className="w-full h-full object-cover" />

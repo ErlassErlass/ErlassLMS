@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 
 import { GamificationService } from "@/lib/services/gamification-service"
+import { CodeExecutionService } from "@/lib/services/code-execution"
 
 export async function submitChallenge(challengeId: string, code: string, isWebPassed?: boolean) {
   const session = await getServerSession(authOptions)
@@ -22,7 +23,7 @@ export async function submitChallenge(challengeId: string, code: string, isWebPa
       return { success: false, message: "Challenge not found" }
     }
 
-    // Mock Evaluation Logic
+    // Evaluation Logic
     let passed = false
     let output = ""
 
@@ -33,13 +34,26 @@ export async function submitChallenge(challengeId: string, code: string, isWebPa
         passed = !!isWebPassed
         output = passed ? "HTML Validation Passed" : "HTML Validation Failed"
     } else {
-        // Python Logic (Simple Mock)
-        if (code.trim().length > 20) {
-            passed = true
-            output = `Running code...\n\nOutput:\n${challenge.expectedOutput}\n\n[SUCCESS] Output matches expected result!`
+        // Real Code Execution via Piston API
+        const execResult = await CodeExecutionService.execute(mode, code)
+        
+        if (execResult.success) {
+            output = execResult.output.trim()
+            
+            // Compare Output with Expected Output
+            // Normalize: remove trailing newlines/spaces
+            const expected = (challenge.expectedOutput || "").trim()
+            
+            if (output === expected) {
+                passed = true
+                output = `Output:\n${output}\n\n[SUCCESS] Output matches expected result!`
+            } else {
+                passed = false
+                output = `Output:\n${output}\n\n[FAIL] Expected:\n${expected}`
+            }
         } else {
             passed = false
-            output = `Running code...\n\nError: Code is too short or incomplete.\n\n[FAIL] Expected output not met.`
+            output = `Execution Error:\n${execResult.error || "Unknown error"}`
         }
     }
 

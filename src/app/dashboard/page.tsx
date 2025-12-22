@@ -20,6 +20,8 @@ import { DailyQuestCard } from "@/components/dashboard/DailyQuestCard"
 
 import { OnboardingTour } from "@/components/dashboard/OnboardingTour"
 
+import { RedeemCodeWidget } from "@/components/dashboard/redeem-code-widget"
+
 async function getDashboardData(userId: string, role?: string) {
   // Trigger Daily Login Check (Side effect: updates streak and creates quests)
   await checkDailyLogin(userId)
@@ -196,7 +198,7 @@ export default async function DashboardPage() {
           </div>
           {/* Decorative Element */}
           <div className="hidden md:block absolute right-10 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-sm p-6 rounded-full border-4 border-white/20 rotate-12">
-            <Trophy className="h-24 w-24 text-white drop-shadow-md" />
+            <Trophy className="h-24 w-24 text-white drop-shadow-md" aria-hidden="true" />
           </div>
         </div>
       </div>
@@ -230,6 +232,11 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* Redeem Widget (New) */}
+      <div className="mb-8">
+        <RedeemCodeWidget />
+      </div>
+
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {/* Stat Card 1: Daily Quests */}
@@ -252,7 +259,7 @@ export default async function DashboardPage() {
                     <DailyQuestCard key={quest.id} quest={quest} />
                 ))
             ) : (
-                <p className="text-sm text-gray-500">Memuat misi...</p>
+                <p className="text-sm text-gray-500">Belum ada misi hari ini.</p>
             )}
           </div>
         </div>
@@ -337,17 +344,18 @@ export default async function DashboardPage() {
           </div>
 
           <div className="grid gap-4">
-            {data.activeCourses.map((course) => (
+            {data.activeCourses.length > 0 ? (
+              data.activeCourses.map((course) => (
               <div id="active-course-card" key={course.id} className="group bg-white dark:bg-gray-800 rounded-2xl p-5 border-2 border-gray-100 dark:border-gray-700 hover:border-tertiary dark:hover:border-tertiary shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row items-center gap-6">
                 {/* Icon/Image Placeholder */}
                 <div className="w-16 h-16 bg-tertiary/10 dark:bg-cyan-900/30 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <BookOpen className="h-8 w-8 text-tertiary dark:text-cyan-400" />
+                  <BookOpen className="h-8 w-8 text-tertiary dark:text-cyan-400" aria-hidden="true" />
                 </div>
                 
-                <div className="flex-1 w-full">
+                <div className="flex-1 w-full text-center sm:text-left">
                   <h3 className="font-bold text-lg text-[#1F2937] dark:text-white mb-1 group-hover:text-tertiary dark:group-hover:text-cyan-400 transition-colors">{course.title}</h3>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="flex items-center gap-3 mb-2 justify-center sm:justify-start">
+                    <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden max-w-[200px] sm:max-w-none">
                       <div 
                         className="h-full bg-tertiary rounded-full transition-all duration-500"
                         style={{ width: `${course.progress}%` }}
@@ -357,13 +365,29 @@ export default async function DashboardPage() {
                   </div>
                 </div>
 
-                <Link href={`/dashboard/courses/${course.id}`}>
-                  <Button className="bg-secondary dark:bg-white hover:bg-secondary/90 dark:hover:bg-gray-200 text-white dark:text-black font-bold rounded-xl px-6 shadow-lg hover:shadow-xl transition-all">
+                <Link href={`/dashboard/courses/${course.id}`} className="w-full sm:w-auto">
+                  <Button className="w-full sm:w-auto bg-secondary dark:bg-white hover:bg-secondary/90 dark:hover:bg-gray-200 text-white dark:text-black font-bold rounded-xl px-6 shadow-lg hover:shadow-xl transition-all">
                     Lanjut
                   </Button>
                 </Link>
               </div>
-            ))}
+            ))
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center">
+                <div className="w-20 h-20 bg-gray-50 dark:bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="h-10 w-10 text-gray-300 dark:text-gray-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Belum ada kelas aktif</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                  Mulai perjalanan belajarmu sekarang! Pilih kelas yang menarik dan tingkatkan skillmu.
+                </p>
+                <Link href="/dashboard/courses">
+                  <Button className="bg-erlass-primary hover:bg-erlass-primary/90 text-white font-bold rounded-xl px-8 shadow-md">
+                    Cari Kelas Baru
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
@@ -377,40 +401,46 @@ export default async function DashboardPage() {
           </div>
 
           <div id="recent-challenges-panel" className="bg-white dark:bg-gray-800 rounded-3xl p-6 border-2 border-gray-100 dark:border-gray-700 shadow-sm">
-            <div className="space-y-6">
-              {data.recentChallenges.map((challenge, idx) => (
-                <div key={challenge.id} className={`relative pl-4 ${idx !== data.recentChallenges.length - 1 ? 'pb-6 border-l-2 border-dashed border-gray-200 dark:border-gray-700' : ''}`}>
-                  {/* Status Dot */}
-                  <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 shadow-sm 
-                    ${challenge.status === 'completed' ? 'bg-[#10B981]' : 
-                      challenge.status === 'in-progress' ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-600'}
-                  `}></div>
+            {data.recentChallenges.length > 0 ? (
+              <div className="space-y-6">
+                {data.recentChallenges.map((challenge, idx) => (
+                  <div key={challenge.id} className={`relative pl-4 ${idx !== data.recentChallenges.length - 1 ? 'pb-6 border-l-2 border-dashed border-gray-200 dark:border-gray-700' : ''}`}>
+                    {/* Status Dot */}
+                    <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 shadow-sm 
+                      ${challenge.status === 'completed' ? 'bg-[#10B981]' : 
+                        challenge.status === 'in-progress' ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-600'}
+                    `}></div>
 
-                  <div>
-                    <h3 className="font-bold text-[#1F2937] dark:text-white leading-tight">{challenge.title}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs font-bold bg-accent/10 dark:bg-amber-900/30 text-accent-foreground dark:text-amber-400 px-2 py-1 rounded-md border border-accent/20 dark:border-amber-800">
-                        +{challenge.points} XP
-                      </span>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-md
-                         ${challenge.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 
-                           challenge.status === 'in-progress' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}
-                      `}>
-                        {challenge.status === 'completed' ? 'Selesai' : 
-                         challenge.status === 'in-progress' ? 'Sedang Jalan' : 'Baru'}
-                      </span>
-                    </div>
-                    <div className="mt-3">
-                      <Link href={`/dashboard/challenges/${challenge.id}`}>
-                        <Button size="sm" variant="outline" className="w-full rounded-lg border-gray-200 dark:border-gray-600 font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10">
-                          {challenge.status === 'completed' ? 'Lihat Hasil' : 'Kerjakan'}
-                        </Button>
-                      </Link>
+                    <div>
+                      <h3 className="font-bold text-[#1F2937] dark:text-white leading-tight">{challenge.title}</h3>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs font-bold bg-accent/10 dark:bg-amber-900/30 text-accent-foreground dark:text-amber-400 px-2 py-1 rounded-md border border-accent/20 dark:border-amber-800">
+                          +{challenge.points} XP
+                        </span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-md
+                           ${challenge.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 
+                             challenge.status === 'in-progress' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}
+                        `}>
+                          {challenge.status === 'completed' ? 'Selesai' : 
+                           challenge.status === 'in-progress' ? 'Sedang Jalan' : 'Baru'}
+                        </span>
+                      </div>
+                      <div className="mt-3">
+                        <Link href={`/dashboard/challenges/${challenge.id}`}>
+                          <Button size="sm" variant="outline" className="w-full rounded-lg border-gray-200 dark:border-gray-600 font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10">
+                            {challenge.status === 'completed' ? 'Lihat Hasil' : 'Kerjakan'}
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500 mb-4">Belum ada misi yang dikerjakan.</p>
+              </div>
+            )}
             
             <Link href="/dashboard/challenges" className="block mt-6">
               <Button className="w-full bg-accent hover:bg-accent/90 text-[#1F2937] font-bold rounded-xl border-b-4 border-accent/80 active:border-b-0 active:translate-y-1 transition-all">

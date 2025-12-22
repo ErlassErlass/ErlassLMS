@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { notFound, redirect } from "next/navigation"
 import { ChallengeEditor } from "@/components/challenge/challenge-editor"
+import { LevelConfig } from "@/components/game/CodeGame"
 
 interface ChallengeSubmitPageProps {
   params: Promise<{
@@ -26,5 +27,8 @@ export default async function ChallengeSubmitPage({ params }: ChallengeSubmitPag
   const challenge = await getChallenge(id)
   if (!challenge) notFound()
 
-  return <ChallengeEditor challenge={challenge} />
+  return <ChallengeEditor challenge={{
+    ...challenge,
+    gameConfig: challenge.gameConfig as unknown as LevelConfig
+  }} />
 }

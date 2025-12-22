@@ -18,12 +18,23 @@ interface ChallengeEditorProps {
     starterCode: string | null
     category: string 
     type: string // Added type
-    gameConfig: any // Added gameConfig
+    gameConfig: LevelConfig // Type fixed from any
   }
 }
 
 export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
-  const [code, setCode] = useState(challenge.starterCode || "")
+  const [code, setCode] = useState(() => {
+    if (challenge.starterCode) return challenge.starterCode
+    
+    // Default templates based on mode
+    const mode = challenge.category.toLowerCase()
+    const isWeb = mode.includes('web') || mode.includes('html') || mode.includes('css') || mode.includes('javascript')
+    const isPython = mode.includes('python')
+
+    if (isPython) return "# Tulis kode Python kamu di sini\nprint('Hello World')"
+    if (isWeb) return "<!-- Tulis kode HTML kamu di sini -->\n<h1>Hello World</h1>"
+    return ""
+  })
   const [output, setOutput] = useState("Ready to run...")
   const [isRunning, setIsRunning] = useState(false)
   const [resultStatus, setResultStatus] = useState<"idle" | "success" | "error">("idle")
@@ -32,9 +43,10 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
   // Determine mode
   const mode = challenge.category.toLowerCase()
   const isScratch = mode.includes('scratch') || mode.includes('block')
+  const isMicrobit = mode.includes('microbit') || mode.includes('robotics')
+  const isInternalGame = mode.includes('gamebased') || (challenge.type === 'GAME' && !isScratch && !isMicrobit)
   const isWeb = mode.includes('web') || mode.includes('html') || mode.includes('css') || mode.includes('javascript')
-  const isPython = mode.includes('python')
-  const isGame = challenge.type === 'GAME'
+  // const isPython = mode.includes('python') // Unused
 
   // Handle Game Completion
   const handleGameComplete = async (submittedCode: string) => {
@@ -49,8 +61,8 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
       }
   }
 
-  // Render Game View
-  if (isGame) {
+  // Render Game View (Internal Robot Maze)
+  if (isInternalGame) {
       return (
         <div className="min-h-screen bg-[#1e1e1e] text-white flex flex-col">
             <div className="h-16 border-b border-[#333] flex items-center justify-between px-4 bg-[#252526]">
@@ -78,13 +90,9 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
       )
   }
 
-  // Setup default starter code based on mode if empty
-  useState(() => {
-    if (!code) {
-        if (isPython) setCode("# Tulis kode Python kamu di sini\nprint('Hello World')")
-        if (isWeb) setCode("<!-- Tulis kode HTML kamu di sini -->\n<h1>Hello World</h1>")
-    }
-  })
+
+  // Setup default starter code logic moved to useState initializer
+
 
   const handleRun = async () => {
     setIsRunning(true)
@@ -101,17 +109,27 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
         return
     }
 
+    // For Micro:bit
+    if (isMicrobit) {
+        setTimeout(() => {
+            setOutput("Project Micro:bit berhasil dijalankan (Simulasi).")
+            setResultStatus("success")
+            setIsRunning(false)
+        }, 1000)
+        return
+    }
+
     // For Web (HTML/CSS/JS) - Client Side Validation
     if (isWeb) {
         try {
             // Create a temporary DOM to validate structure without rendering
-            const parser = new DOMParser()
-            const doc = parser.parseFromString(code, "text/html")
+            // const parser = new DOMParser()
+            // const doc = parser.parseFromString(code, "text/html")
             
             // Simple Validation Logic based on instructions/expected output keywords
             // Example: If expectedOutput contains "h1:Hello World", we check for it.
             // For now, let's assume expectedOutput contains simple keywords to check present
-            const validationKeywords = challenge.expectedOutput.split(',').map(k => k.trim())
+            const validationKeywords = (challenge.expectedOutput || "").split(',').map(k => k.trim())
             let webPassed = true
             let errorMsg = ""
 
@@ -141,6 +159,7 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
                 setResultStatus("error")
             }
         } catch (e) {
+            console.error(e)
             setOutput("Error saat validasi HTML.")
             setResultStatus("error")
         } finally {
@@ -164,6 +183,7 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
         setResultStatus("error")
       }
     } catch (error) {
+      console.error(error) // Log error to usage
       setOutput("An unexpected error occurred.")
       setResultStatus("error")
     } finally {
@@ -193,12 +213,46 @@ export function ChallengeEditor({ challenge }: ChallengeEditorProps) {
             </div>
             <div className="flex-1 flex flex-col">
                 <div className="bg-blue-900/30 p-4 text-center text-sm text-blue-200 border-b border-blue-800">
-                    Silakan buat project Scratch di bawah ini sesuai instruksi. Setelah selesai, klik tombol "Tandai Selesai" di pojok kanan atas.
+                    Silakan buat project Scratch di bawah ini sesuai instruksi. Setelah selesai, klik tombol &quot;Tandai Selesai&quot; di pojok kanan atas.
                 </div>
                 <iframe 
                     src="https://machinelearningforkids.co.uk/scratch/" 
                     className="w-full h-full border-0"
                     allow="microphone; camera"
+                />
+            </div>
+        </div>
+    )
+  }
+
+  // Micro:bit Editor View
+  if (isMicrobit) {
+    return (
+        <div className="flex flex-col h-screen bg-[#1e1e1e] text-white overflow-hidden">
+            <div className="h-16 border-b border-[#333] flex items-center justify-between px-4 bg-[#252526]">
+                <div className="flex items-center gap-4">
+                    <Link href={`/dashboard/challenges/${challenge.id}`}>
+                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                        <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                    </Link>
+                    <h1 className="font-bold text-sm md:text-base">{challenge.title}</h1>
+                </div>
+                <Button 
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                    onClick={handleRun} // Logic to submit "I'm done"
+                >
+                    <CheckCircle className="h-4 w-4 mr-2" /> Tandai Selesai
+                </Button>
+            </div>
+            <div className="flex-1 flex flex-col">
+                <div className="bg-blue-900/30 p-4 text-center text-sm text-blue-200 border-b border-blue-800">
+                    Silakan buat project Micro:bit di bawah ini. Setelah selesai, klik tombol &quot;Tandai Selesai&quot;.
+                </div>
+                <iframe 
+                    src="https://makecode.microbit.org/#editor" 
+                    className="w-full h-full border-0"
+                    allow="usb; microphone; camera"
                 />
             </div>
         </div>

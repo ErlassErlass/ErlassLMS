@@ -1,8 +1,14 @@
 
 import { prisma } from "@/lib/db"
+import { User, Badge } from "@/generated/prisma"
 
 // Level Config
 const LEVEL_CURVE_CONSTANT = 100
+
+type BadgeContext = { 
+    type: 'COURSE_COMPLETE' | 'CHALLENGE_COMPLETE' | 'STREAK' | 'XP_EARNED', 
+    id?: string 
+}
 
 export class GamificationService {
   
@@ -40,7 +46,7 @@ export class GamificationService {
     const oldLevel = user.level
     const newLevel = this.calculateLevel(newXP)
 
-    const updatedUser = await prisma.user.update({
+    await prisma.user.update({
       where: { id: userId },
       data: {
         xp: newXP,
@@ -57,12 +63,13 @@ export class GamificationService {
       newXP,
       newLevel,
       leveledUp,
-      xpGained: amount
+      xpGained: amount,
+      source // Used
     }
   }
 
-  static async checkAndAwardBadges(userId: string, context: { type: 'COURSE_COMPLETE' | 'CHALLENGE_COMPLETE' | 'STREAK' | 'XP_EARNED', id?: string }) {
-    const newBadges = []
+  static async checkAndAwardBadges(userId: string, context: BadgeContext) {
+    const newBadges: Badge[] = []
     
     const user = await prisma.user.findUnique({ 
         where: { id: userId },
@@ -99,7 +106,7 @@ export class GamificationService {
     return newBadges
   }
 
-  private static async evaluateCriteria(userId: string, user: any, badge: any, context: any): Promise<boolean> {
+  private static async evaluateCriteria(userId: string, user: User & { badges: { badgeId: string }[] }, badge: Badge, context: BadgeContext): Promise<boolean> {
       switch (badge.criteriaType) {
           case 'COURSE_COMPLETION':
               // Requires context ID to match the criteria value (Course ID)
@@ -120,16 +127,13 @@ export class GamificationService {
       }
   }
 
-  private static async awardBadgeToUser(userId: string, badge: any) {
+  private static async awardBadgeToUser(userId: string, badge: Badge) {
        try {
            await prisma.userBadge.create({
               data: { userId, badgeId: badge.id }
            })
            
            if (badge.xpReward > 0) {
-               // Award XP but DO NOT trigger another badge check recursively to prevent potential loops if badge award triggers XP badge
-               // We call the direct update or use a flag in awardXP. 
-               // For safety here: Just simple update
                await prisma.user.update({
                    where: { id: userId },
                    data: { xp: { increment: badge.xpReward } }

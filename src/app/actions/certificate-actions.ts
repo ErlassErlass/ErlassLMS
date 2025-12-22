@@ -4,20 +4,26 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { generateId } from "@/lib/id-generator"
-import { revalidatePath } from "next/cache"
 
 interface IssueCertificateProps {
   userId: string
   type: 'COURSE' | 'CHALLENGE' | 'ACHIEVEMENT'
   courseId?: string
   challengeId?: string
-  metadata?: any
+  metadata?: Record<string, unknown>
 }
 
 export async function issueCertificate({ userId, type, courseId, challengeId, metadata }: IssueCertificateProps) {
-  // Validate Session (Internal API call, but double check)
-  // const session = await getServerSession(authOptions)
-  // if (!session) return { error: "Unauthorized" }
+  // Validate Session
+  const session = await getServerSession(authOptions)
+  if (!session) return { error: "Unauthorized" }
+
+  // Only allow Admin or System (if called internally, this check might fail if no session, 
+  // but this is a Server Action exposed to client. Internal calls should use a service function, not an action.)
+  // If this action is intended to be called by client (e.g. after finishing a course), verify the user.
+  if (session.user.id !== userId && session.user.role !== 'SUPERADMIN') {
+      return { error: "Forbidden" }
+  }
 
   // Check if already issued
   const existing = await prisma.certificate.findFirst({
@@ -46,7 +52,7 @@ export async function issueCertificate({ userId, type, courseId, challengeId, me
         courseId,
         challengeId,
         serialNumber,
-        metadata: metadata || {}
+        metadata: metadata ? (metadata as any) : {}
       }
     })
     return { success: true, certificate }

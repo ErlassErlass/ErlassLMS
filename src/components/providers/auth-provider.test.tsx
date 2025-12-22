@@ -2,8 +2,8 @@
 "use client";
 
 import React from "react";
+import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
-import { SessionProvider } from "next-auth/react";
 import { AuthProvider } from "./auth-provider";
 
 // Mock child component to test with
@@ -24,7 +24,7 @@ describe("AuthProvider", () => {
   it("should accept refetchInterval and refetchOnWindowFocus props", () => {
     // This test verifies that our enhanced options are properly passed to SessionProvider
     const { container } = render(
-      <AuthProvider>
+      <AuthProvider refetchInterval={300} refetchOnWindowFocus={true}>
         <MockChild />
       </AuthProvider>
     );
